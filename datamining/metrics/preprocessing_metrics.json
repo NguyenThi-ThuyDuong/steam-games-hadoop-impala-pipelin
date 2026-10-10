@@ -1,0 +1,42 @@
+{
+    "execution_time": "2026-10-10 14:37:11",
+    "raw_total_records": 89618,
+    "raw_attributes_count": 47,
+    "clean_total_records": 89618,
+    "clean_attributes_count": 39,
+    "duplicates_removed": 0,
+    "sentinel_values_handled": {
+        "pct_pos_total_sentinel_negative_1": 36419,
+        "num_reviews_total_sentinel_negative_1": 36419,
+        "recent_reviews_sentinel_negative_1": 82931
+    },
+    "noise_values_corrected": {
+        "required_age_negative_1": 1
+    },
+    "metacritic_missing_classified": 86071,
+    "outlier_thresholds": {
+        "price_upper_iqr": 20.49,
+        "reviews_upper_iqr": 563.5
+    },
+    "outliers_flagged": {
+        "price_outliers_count": 4231,
+        "reviews_outliers_count": 8492
+    },
+    "price_distribution": {
+        "Budget": 39388,
+        "Mid-range": 26759,
+        "Free": 14160,
+        "Premium": 8418,
+        "High-end": 648,
+        "Luxury": 245
+    },
+    "rating_distribution": {
+        "Unrated / Few Reviews": 36419,
+        "Very Positive": 21521,
+        "Mixed": 12768,
+        "Positive": 9655,
+        "Overwhelmingly Positive": 7138,
+        "Negative": 1788,
+        "Overwhelmingly Negative": 329
+    }
+}

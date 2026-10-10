@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Trang Chủ - Steam Big Data Analytics{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <!-- Hero Banner -->
+    <div class="p-5 mb-4 rounded-4 bg-slate-900 border border-secondary border-opacity-25 shadow-lg position-relative overflow-hidden">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-3 py-2 rounded-pill mb-3">
+                    <i class="bi bi-cpu me-1"></i> Big Data Engineering & OLAP Query Engine
+                </span>
+                <h1 class="display-5 fw-bold mb-3 text-white">Phân Tích Dữ Liệu Trò Chơi Điện Tử & Khám Phá Xu Hướng Thị Trường</h1>
+                <p class="lead text-secondary mb-4">
+                    Khai phá hơn <strong>76,000+ tựa game</strong> và <strong>40+ triệu lượt đánh giá</strong> từ Steam bằng hệ sinh thái phân tán <strong>Hadoop HDFS</strong> kết hợp engine truy vấn tương tác thời gian thực <strong>Apache Impala</strong>.
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg px-4 shadow">
+                        <i class="bi bi-play-circle me-1"></i> Khám Phá Dashboard
+                    </a>
+                    <a href="{{ url_for('architecture') }}" class="btn btn-outline-info btn-lg px-4">
+                        <i class="bi bi-diagram-3 me-1"></i> Kiến Trúc Hệ Thống
+                    </a>
+                    <a href="{{ url_for('benchmark') }}" class="btn btn-outline-warning btn-lg px-4">
+                        <i class="bi bi-speedometer2 me-1"></i> Thực Nghiệm Tốc Độ
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-4 text-center mt-4 mt-lg-0">
+                <i class="bi bi-gpu-card text-info" style="font-size: 8rem; opacity: 0.85;"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metric Cards -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card card-stat p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-3 rounded-circle bg-primary bg-opacity-10 text-primary fs-3">
+                        <i class="bi bi-controller"></i>
+                    </div>
+                    <div>
+                        <div class="text-secondary small text-uppercase fw-semibold">Quy Mô Game</div>
+                        <h2 class="fw-bold mb-0 text-white">76,119</h2>
+                        <small class="text-success"><i class="bi bi-check-circle me-1"></i> Đã làm sạch & chuẩn hóa</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-stat p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-3 rounded-circle bg-success bg-opacity-10 text-success fs-3">
+                        <i class="bi bi-chat-square-quote"></i>
+                    </div>
+                    <div>
+                        <div class="text-secondary small text-uppercase fw-semibold">Lượt Đánh Giá</div>
+                        <h2 class="fw-bold mb-0 text-white">40+ Triệu</h2>
+                        <small class="text-info"><i class="bi bi-hdd-network me-1"></i> 14+ GB dữ liệu phân tán</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-stat p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-3 rounded-circle bg-warning bg-opacity-10 text-warning fs-3">
+                        <i class="bi bi-lightning-charge"></i>
+                    </div>
+                    <div>
+                        <div class="text-secondary small text-uppercase fw-semibold">Tăng Tốc Impala</div>
+                        <h2 class="fw-bold mb-0 text-white">16.3x</h2>
+                        <small class="text-warning"><i class="bi bi-file-earmark-binary me-1"></i> Parquet vs CSV thuần</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-stat p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-3 rounded-circle bg-info bg-opacity-10 text-info fs-3">
+                        <i class="bi bi-calendar-range"></i>
+                    </div>
+                    <div>
+                        <div class="text-secondary small text-uppercase fw-semibold">Kỷ Nguyên Dữ Liệu</div>
+                        <h2 class="fw-bold mb-0 text-white">1997 - 2025</h2>
+                        <small class="text-primary"><i class="bi bi-folder2 me-1"></i> 28 năm tiến hóa ngành game</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Highlights -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card bg-slate-900 border border-secondary border-opacity-25 p-4 h-100 rounded-3">
+                <h4 class="text-info fw-bold mb-3"><i class="bi bi-question-circle me-2"></i>Tại sao chọn Apache Impala & Hadoop?</h4>
+                <p class="text-secondary">
+                    Trong bài toán phân tích kho dữ liệu Big Data (trên 40 triệu đánh giá và hàng trăm ngàn tựa game), các hệ thống RDBMS truyền thống (MySQL, PostgreSQL) hay Hive MapReduce gặp hạn chế nghiêm trọng về độ trễ và tài nguyên tính toán.
+                </p>
+                <ul class="text-secondary list-unstyled">
+                    <li class="mb-2"><i class="bi bi-check2-circle text-success me-2"></i><strong>Lưu trữ HDFS phân tán:</strong> Khả năng mở rộng theo chiều ngang (scale-out) với cơ chế chịu lỗi mạnh mẽ.</li>
+                    <li class="mb-2"><i class="bi bi-check2-circle text-success me-2"></i><strong>Apache Impala MPP Engine:</strong> Thực thi truy vấn trực tiếp trong bộ nhớ (In-memory), không sinh MapReduce task, tốc độ phản hồi tính bằng mili-giây.</li>
+                    <li class="mb-2"><i class="bi bi-check2-circle text-success me-2"></i><strong>Định dạng Parquet:</strong> Đọc theo cột (Column Pruning), nén Snappy tiết kiệm 75% ổ đĩa.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card bg-slate-900 border border-secondary border-opacity-25 p-4 h-100 rounded-3">
+                <h4 class="text-info fw-bold mb-3"><i class="bi bi-award me-2"></i>Các Câu Hỏi Nghiên Cứu Trọng Tâm</h4>
+                <div class="accordion accordion-flush" id="accordionRQ">
+                    <div class="accordion-item bg-transparent text-light border-bottom border-secondary border-opacity-25">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-transparent text-light" type="button" data-bs-toggle="collapse" data-bs-target="#rq1">
+                                <strong>1. Xu hướng phát hành & Mô hình Free-To-Play (Q1, Q2)</strong>
+                            </button>
+                        </h2>
+                        <div id="rq1" class="accordion-collapse collapse" data-bs-parent="#accordionRQ">
+                            <div class="accordion-body text-secondary small">
+                                Số lượng game bùng nổ vượt bậc từ sau kỷ nguyên Steam Direct (2017) và đạt kỷ lục vào năm 2024. Thị phần F2P tăng dần và khẳng định vị thế chủ lực trong việc thu hút người chơi.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item bg-transparent text-light border-bottom border-secondary border-opacity-25">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-transparent text-light" type="button" data-bs-toggle="collapse" data-bs-target="#rq2">
+                                <strong>2. Dịch chuyển thể loại qua các kỷ nguyên (Q3, Q4, Q8)</strong>
+                            </button>
+                        </h2>
+                        <div id="rq2" class="accordion-collapse collapse" data-bs-parent="#accordionRQ">
+                            <div class="accordion-body text-secondary small">
+                                Indie vươn lên trở thành thể loại áp đảo số lượng từ năm 2015 đến nay; Action & Adventure duy trì lượng đánh giá cao và doanh thu bền vững.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item bg-transparent text-light border-bottom border-secondary border-opacity-25">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-transparent text-light" type="button" data-bs-toggle="collapse" data-bs-target="#rq3">
+                                <strong>3. Tương quan giá bán, đánh giá & outliers (Q5, Q9, Q10)</strong>
+                            </button>
+                        </h2>
+                        <div id="rq3" class="accordion-collapse collapse" data-bs-parent="#accordionRQ">
+                            <div class="accordion-body text-secondary small">
+                                Khám phá các game dị biệt: Game miễn phí nhưng thu hút hàng triệu đánh giá (CS2, Dota 2, PUBG) đối lập với nhóm game định giá cao bất thường ($200-$1000) nhưng gần như không có người tương tác.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Dữ Liệu & Quy Trình ETL - Steam Analytics{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <div class="mb-4 pb-2 border-bottom border-secondary border-opacity-25">
+        <h2 class="fw-bold mb-1 text-white"><i class="bi bi-database-check text-info me-2"></i>Dữ Liệu & Quy Trình Tiền Xử Lý (ETL Pipeline)</h2>
+        <p class="text-secondary mb-0">Hồ sơ dữ liệu trước và sau quá trình làm sạch, chuẩn hoá và trích xuất đặc trưng</p>
+    </div>
+
+    <!-- Data Overview Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card card-stat p-3 h-100">
+                <h5 class="text-info fw-bold"><i class="bi bi-box-seam me-2"></i>Tập Dữ Liệu Ban Đầu</h5>
+                <ul class="text-secondary small mb-0 ps-3">
+                    <li><strong>Nguồn thu thập:</strong> Steam Web API & Kaggle</li>
+                    <li><strong>File `games.csv`:</strong> 76,211 dòng, 39 cột (~95 MB)</li>
+                    <li><strong>File `reviews.csv`:</strong> ~16 - 40 triệu đánh giá (~14 GB)</li>
+                    <li><strong>Vấn đề:</strong> Giá trị trống, trùng lặp appid, chuỗi JSON lồng nhau ở genres/tags.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-stat p-3 h-100">
+                <h5 class="text-success fw-bold"><i class="bi bi-check2-all me-2"></i>Quy Trình Tiền Xử Lý (Python)</h5>
+                <ul class="text-secondary small mb-0 ps-3">
+                    <li><strong>Khử trùng lặp:</strong> Lọc theo khóa chính <code>appid</code>.</li>
+                    <li><strong>Chuẩn hoá giá:</strong> Chuyển 'Free to play' thành 0.0, parse giá tiền USD.</li>
+                    <li><strong>Feature Engineering:</strong> Tạo biến <code>positive_ratio</code>, <code>price_category</code>, <code>release_year</code>.</li>
+                    <li><strong>Tách đa trị:</strong> Chuẩn hóa dạng Star Schema thành các bảng chiều riêng biệt.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-stat p-3 h-100">
+                <h5 class="text-warning fw-bold"><i class="bi bi-file-earmark-arrow-up me-2"></i>Lưu Trữ Parquet & HDFS</h5>
+                <ul class="text-secondary small mb-0 ps-3">
+                    <li><strong>Nén cột Snappy:</strong> Giảm 75% kích thước lưu trữ vật lý trên đĩa.</li>
+                    <li><strong>Phân vùng thư mục:</strong> <code>games_parquet/release_year=YYYY/</code></li>
+                    <li><strong>Nạp vào Hadoop HDFS:</strong> Lệnh <code>hdfs dfs -put</code> đưa lên cụm.</li>
+                    <li><strong>Đăng ký Impala:</strong> Khởi tạo các <code>EXTERNAL TABLE</code> trỏ tới HDFS.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preprocessing Comparison Table -->
+    <div class="card bg-slate-900 border border-secondary border-opacity-25 p-4 rounded-3 mb-4">
+        <h4 class="text-white fw-bold mb-3"><i class="bi bi-arrow-left-right me-2"></i>So Sánh Dữ Liệu Trước và Sau Xử Lý</h4>
+        <div class="table-responsive">
+            <table class="table table-dark table-striped table-bordered border-secondary border-opacity-50">
+                <thead class="table-secondary text-dark">
+                    <tr>
+                        <th>Trường Thuộc Tính</th>
+                        <th>Dữ Liệu Thô (Raw CSV)</th>
+                        <th>Dữ Liệu Đã Xử Lý (Parquet/Impala)</th>
+                        <th>Mục Đích Sử Dụng</th>
+                    </tr>
+                </thead>
+                <tbody class="small">
+                    <tr>
+                        <td class="fw-bold">price</td>
+                        <td>Chuỗi văn bản ("$19.99", "Free", "Free to Play", null)</td>
+                        <td class="text-success fw-bold"><code>FLOAT</code> (0.0 cho game miễn phí, số thực dương)</td>
+                        <td>Tính toán giá trung bình, phân nhóm giá, thống kê doanh thu.</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">genres / tags</td>
+                        <td>Chuỗi text danh sách ghép nối: "Action, Indie, Adventure"</td>
+                        <td class="text-success fw-bold">Tách thành bảng chiều <code>games_genres</code> chuẩn hoá</td>
+                        <td>Cho phép JOIN phân tích đa chiều mà không cần dùng hàm Regex/LIKE chậm chạp.</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">release_date</td>
+                        <td>Định dạng text không nhất quán ("Nov 1, 2020", "2020-11-01")</td>
+                        <td class="text-success fw-bold">Tách trường <code>release_year (INT)</code> làm Partition Key</td>
+                        <td>Kích hoạt tính năng Partition Pruning trên Impala, tăng tốc truy vấn theo mốc thời gian.</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">reviews / rating</td>
+                        <td>Gồm 2 cột riêng rẽ positive và negative reviews</td>
+                        <td class="text-success fw-bold">Thêm thuộc tính phái sinh <code>positive_ratio (%)</code></td>
+                        <td>Đánh giá chất lượng và mức độ yêu thích của cộng đồng đối với sản phẩm.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

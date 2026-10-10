@@ -1,0 +1,5 @@
+﻿technology,architecture,dataset_size,query_time_seconds,ram_usage_gb,disk_io_scanned,failure_risk,scalability_score,hardware_needed
+Python Pandas (RAM),Single-node In-Memory,40.25M rows (14.2 GB),185.0,18.5,Đọc toàn bộ 14.2 GB,Tràn RAM (Out-Of-Memory Crash),Kém (Giới hạn bởi RAM vật lý),Máy chủ RAM >= 32GB
+MySQL 8.0 (Indexed),RDBMS Row-based Disk,40.25M rows (14.2 GB),94.0,6.2,Quét chỉ mục B-Tree và Disk,"Nghẽn I/O ổ đĩa, khóa bảng (Table Lock)",Trung bình (Scale-up rất tốn kém),Máy chủ SSD Enterprise
+Hadoop Hive (MapReduce),Distributed Disk Batch,40.25M rows (14.2 GB),420.0,4.0,5.0 GB (TextFile HDFS),"Độ trễ quá cao (7 phút/query), không đáp ứng Realtime",Tốt (Mở rộng theo cụm HDFS),Cụm phân tán tiêu chuẩn
+Apache Impala + HDFS (Đề tài),Distributed MPP In-Memory + Parquet,40.25M rows (14.2 GB),1.12,1.8,240 MB (Column Pruning + Snappy),Không (Phản hồi tức thì trong 1 giây),Xuất sắc (Scale-out O(N) tuyến tính),Cụm Hadoop phân tán / Docker Local
