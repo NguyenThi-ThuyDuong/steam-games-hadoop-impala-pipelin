@@ -2,9 +2,10 @@ import csv
 import os
 from collections import defaultdict
 
-GAMES_FILE = r"D:\HocTap\HK1_27\BigData\DoAnBigData\data\processed\games_cleaned.csv"
-GENRES_FILE = r"D:\HocTap\HK1_27\BigData\DoAnBigData\data\processed\games_genres.csv"
-RESULTS_DIR = r"D:\HocTap\HK1_27\BigData\DoAnBigData\results\analysis"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+GAMES_FILE = os.path.join(BASE_DIR, "data", "processed", "games_cleaned.csv")
+GENRES_FILE = os.path.join(BASE_DIR, "data", "processed", "games_genres.csv")
+RESULTS_DIR = os.path.join(BASE_DIR, "results", "analysis")
 
 os.makedirs(RESULTS_DIR, exist_ok=True)
 

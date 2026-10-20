@@ -1,7 +1,8 @@
 import json
 import os
 
-NOTEBOOKS_DIR = r"D:\HocTap\HK1_27\BigData\DoAnBigData\notebooks"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+NOTEBOOKS_DIR = os.path.join(BASE_DIR, "notebooks")
 os.makedirs(NOTEBOOKS_DIR, exist_ok=True)
 
 def create_nb(cells):
@@ -41,7 +42,13 @@ import numpy as np
 import glob
 import os
 
-games_path = r"D:\\HocTap\\HK1_27\\BigData\\archive\\games_march2025_cleaned.csv"
+# Đường dẫn tự động tìm thư mục archive
+current_dir = os.getcwd()
+archive_dir = os.path.abspath(os.path.join(current_dir, "..", "archive"))
+games_path = os.path.join(archive_dir, "games_march2025_cleaned.csv")
+if not os.path.exists(games_path):
+    games_path = "/Users/hochidung/Documents/1_monhoc/BigData/archive/games_march2025_cleaned.csv"
+
 df_games = pd.read_csv(games_path, low_memory=False)
 
 print(f"Games dataset shape: {df_games.shape}")
@@ -52,10 +59,10 @@ df_games.head(3)"""),
     code_cell("""num_cols = ['price', 'metacritic_score', 'positive', 'negative', 'average_playtime_forever', 'peak_ccu', 'pct_pos_total', 'num_reviews_total']
 df_games[num_cols].describe()"""),
     markdown_cell("## Kiểm Tra Các File Review"),
-    code_cell("""review_files = sorted(glob.glob(r"D:\\HocTap\\HK1_27\\BigData\\archive\\reviews-*.csv"))
+    code_cell("""review_files = sorted(glob.glob(os.path.join(archive_dir, "reviews-*.csv")))
 print(f"Found {len(review_files)} review files.")
 
-for f in review_files:
+for f in review_files[:5]:
     fname = os.path.basename(f)
     size_mb = os.path.getsize(f) / (1024 * 1024)
     print(f"{fname}: {size_mb:.2f} MB")""")
@@ -70,8 +77,13 @@ cells2 = [
     code_cell("""import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
-df_games = pd.read_csv(r"D:\\HocTap\\HK1_27\\BigData\\DoAnBigData\\data\\processed\\games_cleaned.csv", low_memory=False)
+processed_csv = os.path.join(os.getcwd(), "..", "data", "processed", "games_cleaned.csv")
+if not os.path.exists(processed_csv):
+    processed_csv = os.path.join(os.getcwd(), "data", "processed", "games_cleaned.csv")
+
+df_games = pd.read_csv(processed_csv, low_memory=False)
 print(f"Loaded processed games: {len(df_games):,} rows.")
 df_games.head(3)"""),
     markdown_cell("## RQ1: Phân tích xu hướng phát hành theo năm"),
@@ -110,9 +122,14 @@ cells4 = [
     code_cell("""import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 sns.set_theme(style="whitegrid")
-df_games = pd.read_csv(r"D:\\HocTap\\HK1_27\\BigData\\DoAnBigData\\data\\processed\\games_cleaned.csv", low_memory=False)
+processed_csv = os.path.join(os.getcwd(), "..", "data", "processed", "games_cleaned.csv")
+if not os.path.exists(processed_csv):
+    processed_csv = os.path.join(os.getcwd(), "data", "processed", "games_cleaned.csv")
+
+df_games = pd.read_csv(processed_csv, low_memory=False)
 
 yearly = df_games[(df_games['release_year'] >= 2000) & (df_games['release_year'] <= 2024)].groupby('release_year').size()
 
@@ -122,11 +139,14 @@ plt.title('Figure 1: Số Lượng Trò Chơi Phát Hành Theo Năm (2000 - 2024
 plt.xlabel('Năm Phát Hành')
 plt.ylabel('Số Lượng Games')
 plt.tight_layout()
-plt.savefig(r"D:\\HocTap\\HK1_27\\BigData\\DoAnBigData\\figures\\fig1_yearly_releases.png", dpi=300)
+fig_out = os.path.join(os.getcwd(), "..", "figures", "fig1_yearly_releases.png")
+if not os.path.exists(os.path.dirname(fig_out)):
+    fig_out = os.path.join(os.getcwd(), "figures", "fig1_yearly_releases.png")
+plt.savefig(fig_out, dpi=300)
 plt.show()""")
 ]
 
 with open(os.path.join(NOTEBOOKS_DIR, '04_visualization.ipynb'), 'w', encoding='utf-8') as f:
     json.dump(create_nb(cells4), f, indent=2)
 
-print("All 4 Jupyter Notebooks generated successfully!")
+print("All 4 Jupyter Notebooks generated successfully with dynamic paths!")

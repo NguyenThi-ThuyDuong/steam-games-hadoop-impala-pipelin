@@ -5,12 +5,13 @@ import seaborn as sns
 import os
 
 sns.set_theme(style="whitegrid")
-plt.rcParams['font.sans-serif'] = 'Segoe UI'
+plt.rcParams['font.sans-serif'] = ['Segoe UI', 'DejaVu Sans', 'Arial', 'sans-serif']
 plt.rcParams['axes.unicode_minus'] = False
 
-PROCESSED_DIR = r"D:\HocTap\HK1_27\BigData\DoAnBigData\data\processed"
-RESULTS_DIR = r"D:\HocTap\HK1_27\BigData\DoAnBigData\results\analysis"
-FIGURES_DIR = r"D:\HocTap\HK1_27\BigData\DoAnBigData\figures"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROCESSED_DIR = os.path.join(BASE_DIR, "data", "processed")
+RESULTS_DIR = os.path.join(BASE_DIR, "results", "analysis")
+FIGURES_DIR = os.path.join(BASE_DIR, "figures")
 
 os.makedirs(RESULTS_DIR, exist_ok=True)
 os.makedirs(FIGURES_DIR, exist_ok=True)

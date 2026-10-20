@@ -8,6 +8,11 @@ __pycache__/
 venv/
 env/
 .env
+.venv/
+.vscode/
+
+# Database files
+*.db
 
 # Large raw datasets (>100MB blocked by GitHub)
 data/processed/reviews_cleaned/
