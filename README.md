@@ -1,7 +1,7 @@
 # 🎮 PHÂN TÍCH THỊ TRƯỜNG TRÒ CHƠI ĐIỆN TỬ STEAM VỚI APACHE HADOOP HDFS VÀ APACHE IMPALA
 
 > **Đồ Án Môn Học:** Xử Lý Dữ Liệu Lớn (Big Data)  
-> **Nhánh Thực Nghiệm:** `demo_dung`  
+> **Nhánh Chính:** `main` (Toàn bộ mã nguồn, Docker & Web Benchmark)  
 > **Giao Diện Điều Khiển:** Streamlit Web Terminal & Multi-Engine Interactive Benchmark Dashboard  
 
 ---
