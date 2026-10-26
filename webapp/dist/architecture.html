@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="vi" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiến Trúc Hadoop & Apache Impala - Steam Analytics</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <!-- Plotly.js Latest -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+</head>
+<body class="bg-dark text-light">
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-slate-900 sticky-top border-bottom border-secondary border-opacity-25 px-4 shadow">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                <i class="bi bi-controller text-info fs-3"></i>
+                <span class="brand-text">STEAM BIG DATA</span>
+                <span class="badge bg-primary ms-1">Impala Powered</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto gap-2">
+                    <li class="nav-item">
+                        <a class="nav-link px-3" href="/"><i class="bi bi-house-door me-1"></i> Tổng Quan</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" href="/dashboard"><i class="bi bi-bar-chart-line me-1"></i> Dashboard Phân Tích</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" href="/architecture"><i class="bi bi-diagram-3 me-1"></i> Kiến Trúc Hadoop/Impala</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" href="/benchmark"><i class="bi bi-speedometer2 me-1"></i> Thực Nghiệm Hiệu Năng</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" href="/data"><i class="bi bi-database-check me-1"></i> Dữ Liệu & ETL</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="py-4">
+        
+<div class="container py-3">
+    <div class="mb-4 pb-2 border-bottom border-secondary border-opacity-25">
+        <h2 class="fw-bold mb-1 text-white"><i class="bi bi-diagram-3 text-info me-2"></i>Kiến Trúc Hệ Thống Big Data</h2>
+        <p class="text-secondary mb-0">Làm rõ mô hình tích hợp Hadoop HDFS, Apache Impala và định dạng cột Parquet</p>
+    </div>
+
+    <!-- System Pipeline Visualization -->
+    <div class="card bg-slate-900 border border-secondary border-opacity-25 p-4 mb-4 rounded-3 shadow">
+        <h4 class="text-info fw-bold mb-3"><i class="bi bi-arrow-repeat me-2"></i>Quy Trình Xử Lý Dữ Liệu Lớn (Big Data Pipeline)</h4>
+        <div class="row g-3 text-center">
+            <div class="col-md-2">
+                <div class="p-3 rounded bg-dark border border-secondary border-opacity-50 h-100">
+                    <i class="bi bi-filetype-csv text-warning fs-1"></i>
+                    <h6 class="fw-bold mt-2">1. Dữ Liệu Thô</h6>
+                    <small class="text-secondary">games.csv (95MB)<br>reviews.csv (14GB)</small>
+                </div>
+            </div>
+            <div class="col-md-1 d-flex align-items-center justify-content-center">
+                <i class="bi bi-chevron-right text-info fs-3"></i>
+            </div>
+            <div class="col-md-2">
+                <div class="p-3 rounded bg-dark border border-secondary border-opacity-50 h-100">
+                    <i class="bi bi-gear-wide-connected text-success fs-1"></i>
+                    <h6 class="fw-bold mt-2">2. Tiền Xử Lý Python</h6>
+                    <small class="text-secondary">Làm sạch, chuẩn hoá, Star Schema, nén Snappy</small>
+                </div>
+            </div>
+            <div class="col-md-1 d-flex align-items-center justify-content-center">
+                <i class="bi bi-chevron-right text-info fs-3"></i>
+            </div>
+            <div class="col-md-2">
+                <div class="p-3 rounded bg-dark border border-info h-100 shadow-sm">
+                    <i class="bi bi-hdd-stack text-info fs-1"></i>
+                    <h6 class="fw-bold mt-2 text-info">3. Hadoop HDFS</h6>
+                    <small class="text-secondary">Lưu trữ phân tán<br>Partition theo năm<br>Block 128MB</small>
+                </div>
+            </div>
+            <div class="col-md-1 d-flex align-items-center justify-content-center">
+                <i class="bi bi-chevron-right text-info fs-3"></i>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3 rounded bg-dark border border-warning h-100 shadow-sm">
+                    <i class="bi bi-lightning-charge text-warning fs-1"></i>
+                    <h6 class="fw-bold mt-2 text-warning">4. Apache Impala</h6>
+                    <small class="text-secondary">MPP SQL Engine<br>Catalog & Statestore<br>Truy vấn In-Memory</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Why Impala + Hadoop Answer -->
+    <div class="card bg-slate-900 border border-secondary border-opacity-25 p-4 mb-4 rounded-3">
+        <h4 class="text-warning fw-bold mb-3"><i class="bi bi-lightbulb me-2"></i>Vì Sao Cần Hadoop Kèm Apache Impala Trong Đồ Án?</h4>
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="p-3 rounded bg-dark border border-secondary border-opacity-25 h-100">
+                    <h5 class="text-info fw-bold"><i class="bi bi-hdd-network me-2"></i>Vai trò của Apache Hadoop (HDFS)</h5>
+                    <p class="text-secondary small mb-2">
+                        Apache Impala <strong>không phải là một cơ sở dữ liệu lưu trữ độc lập</strong>. Impala là một công cụ tính toán phân tán (Compute Engine). Do đó, Impala bắt buộc cần một tầng lưu trữ phân tán (Storage Layer) bên dưới.
+                    </p>
+                    <ul class="text-secondary small ps-3">
+                        <li><strong>Chịu lỗi & Lưu trữ dung lượng lớn:</strong> Chứa hàng chục gigabyte dữ liệu đánh giá người dùng (reviews) an toàn qua cơ chế nhân bản (Replication).</li>
+                        <li><strong>Phân tán theo khối (Blocks):</strong> Tách nhỏ dữ liệu thành các block 128MB đặt trên các DataNode để đọc song song.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="p-3 rounded bg-dark border border-secondary border-opacity-25 h-100">
+                    <h5 class="text-success fw-bold"><i class="bi bi-lightning me-2"></i>Vai trò của Apache Impala</h5>
+                    <p class="text-secondary small mb-2">
+                        Trước khi có Impala, Hadoop dùng Hive MapReduce để query SQL – thời gian chạy mất hàng phút/giờ.
+                    </p>
+                    <ul class="text-secondary small ps-3">
+                        <li><strong>MPP Architecture:</strong> Xử lý song song hàng loạt trực tiếp trên bộ nhớ RAM của cụm, phản hồi chỉ trong vài giây.</li>
+                        <li><strong>SQL Tương thích cao:</strong> Hỗ trợ cú pháp chuẩn ANSI SQL, Aggregate, Window functions, JOIN phức tạp.</li>
+                        <li><strong>Tích hợp Parquet:</strong> Đọc trực tiếp các file Parquet mà không cần qua giai đoạn chuyển đổi hay load vào database truyền thống.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Star Schema Data Model -->
+    <div class="card bg-slate-900 border border-secondary border-opacity-25 p-4 rounded-3">
+        <h4 class="text-info fw-bold mb-3"><i class="bi bi-table me-2"></i>Mô Hình Dữ Liệu Star Schema Trên Impala</h4>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover table-bordered border-secondary border-opacity-50">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Tên Bảng</th>
+                        <th>Loại Bảng</th>
+                        <th>Định Dạng</th>
+                        <th>Kỹ Thuật Phân Vùng</th>
+                        <th>Mô Tả Chức Năng</th>
+                    </tr>
+                </thead>
+                <tbody class="small">
+                    <tr>
+                        <td class="fw-bold text-info">games_main</td>
+                        <td>Fact Table</td>
+                        <td>Apache Parquet</td>
+                        <td><code>PARTITION BY (release_year)</code></td>
+                        <td>Chứa 33 thuộc tính cốt lõi: appid, tên, giá bán, reviews, rating, peak CCU, hỗ trợ hệ điều hành...</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-success">games_genres</td>
+                        <td>Dimension Table</td>
+                        <td>Apache Parquet</td>
+                        <td>Không phân vùng</td>
+                        <td>Tách 1-nhiều thể loại (Indie, Action, Adventure...) liên kết qua khóa <code>appid</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-success">games_developers</td>
+                        <td>Dimension Table</td>
+                        <td>Apache Parquet</td>
+                        <td>Không phân vùng</td>
+                        <td>Danh sách đơn vị phát triển game liên kết qua <code>appid</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-success">games_publishers</td>
+                        <td>Dimension Table</td>
+                        <td>Apache Parquet</td>
+                        <td>Không phân vùng</td>
+                        <td>Danh sách các nhà phát hành chịu trách nhiệm thương mại hóa.</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-success">games_tags</td>
+                        <td>Dimension Table</td>
+                        <td>Apache Parquet</td>
+                        <td>Không phân vùng</td>
+                        <td>Nhãn mô tả chi tiết sở thích và trải nghiệm do cộng đồng gắn cho game.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 border-top border-secondary border-opacity-25 py-4 mt-5 text-center text-muted">
+        <div class="container">
+            <p class="mb-1">Đồ Án Xử Lý Dữ Liệu Lớn & Khai Phá Thị Trường Trò Chơi Điện Tử</p>
+            <small>Nền tảng: Hadoop HDFS | Apache Impala | Parquet Columnar | Flask & Plotly</small>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+</body>
+</html>
