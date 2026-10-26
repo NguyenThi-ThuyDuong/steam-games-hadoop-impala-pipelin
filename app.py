@@ -2,12 +2,14 @@ import streamlit as st
 import subprocess
 import time
 import io
+import os
 import re
 import json
 import sqlite3
 import pymysql
 import numpy as np
 import pandas as pd
+import altair as alt
 
 # -----------------------------------------------------------------------------
 # PAGE CONFIGURATION
@@ -102,6 +104,7 @@ st.markdown("""
 # DATASET PATHS
 # -----------------------------------------------------------------------------
 DATA_DIR = "/Users/hochidung/Documents/1_monhoc/BigData/DoAnBigData/data/processed"
+RESULTS_DIR = "/Users/hochidung/Documents/1_monhoc/BigData/DoAnBigData/datamining/results"
 GAMES_CSV = f"{DATA_DIR}/games_cleaned.csv"
 GENRES_CSV = f"{DATA_DIR}/games_genres.csv"
 PUBLISHERS_CSV = f"{DATA_DIR}/games_publishers.csv"
@@ -174,6 +177,23 @@ def get_cached_games_df():
         return pd.read_csv(GAMES_CSV)
     except Exception:
         return None
+
+@st.cache_data
+def get_cached_genres_df():
+    try:
+        return pd.read_csv(GENRES_CSV)
+    except Exception:
+        return None
+
+@st.cache_data
+def load_analysis_result(filename: str):
+    p = os.path.join(RESULTS_DIR, filename)
+    if os.path.exists(p):
+        try:
+            return pd.read_csv(p)
+        except Exception:
+            return None
+    return None
 
 def run_pandas_bq(query_id: str):
     """
@@ -1016,36 +1036,429 @@ with tab_benchmark:
         """)
 
 # =============================================================================
-# TAB 3: BẢNG ĐIỀU KHIỂN TRỰC QUAN (ANALYTICS & MARKET TRENDS)
+# TAB 3: BẢNG ĐIỀU KHIỂN TRỰC QUAN HÓA (ANALYTICS & BI DASHBOARD)
 # =============================================================================
 with tab_visuals:
-    st.subheader("📈 Phân Tích Xu Hướng Thị Trường Game Steam (Dữ Liệu Sống)")
-    st.markdown("Các đồ thị phân tích được truy vấn trực tiếp từ bảng `games_parquet` trong Apache Impala:")
-    
-    col_t3_1, col_t3_2 = st.columns(2)
-    
-    with col_t3_1:
-        st.markdown("#### 1. Số lượng game phát hành qua từng năm (1997 - 2025)")
-        q_years = "SELECT release_year, COUNT(*) AS total_games FROM games_parquet WHERE release_year >= 1997 AND release_year <= 2025 GROUP BY release_year ORDER BY release_year;"
-        df_y, _, _, _, _ = execute_impala_query(q_years)
-        if isinstance(df_y, pd.DataFrame) and not df_y.empty:
-            st.bar_chart(df_y.set_index("release_year")[["total_games"]], color="#0284C7")
-            st.caption("Quan sát: Thị trường bùng nổ mạnh mẽ từ năm 2014 và đạt đỉnh trên 18,000 game vào năm 2024.")
+    st.markdown('<div class="main-title" style="font-size: 1.8rem;">📈 Bảng Điều Khiển Trực Quan Hóa & Khám Phá Thị Trường Steam</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Công cụ thống kê tương tác đa chiều kết nối trực tiếp Apache Impala (MPP In-Memory) và tập dữ liệu 89,618 games</div>', unsafe_allow_html=True)
 
-    with col_t3_2:
-        st.markdown("#### 2. Top 10 Thể loại game phổ biến nhất")
-        q_gen = "SELECT gg.genre, COUNT(DISTINCT g.appid) AS total_games FROM games_parquet g JOIN games_genres gg ON g.appid = gg.appid GROUP BY gg.genre ORDER BY total_games DESC LIMIT 10;"
-        df_g, _, _, _, _ = execute_impala_query(q_gen)
-        if isinstance(df_g, pd.DataFrame) and not df_g.empty:
-            st.bar_chart(df_g.set_index("genre")[["total_games"]], color="#10B981")
-            st.caption("Quan sát: Thể loại Indie chiếm số lượng áp đảo tuyệt đối, theo sau là Action và Adventure.")
+    # 1. BỘ CÔNG CỤ LỌC TƯƠNG TÁC (INTERACTIVE CONTROL PANEL)
+    with st.expander("🛠️ BỘ CÔNG CỤ LỌC & TRUY VẤN THỐNG KÊ TƯƠNG TÁC (INTERACTIVE CONTROL PANEL)", expanded=True):
+        col_f1, col_f2, col_f3, col_f4 = st.columns([2, 1.4, 1.4, 1.4])
+        with col_f1:
+            sel_years = st.slider("📅 Khoảng năm phát hành:", min_value=1997, max_value=2025, value=(2010, 2024), key="vis_year_slider")
+        with col_f2:
+            genre_list = ["Tất cả thể loại", "Indie", "Action", "Casual", "Adventure", "Simulation", "Strategy", "RPG", "Early Access", "Free To Play", "Sports", "Racing", "Massively Multiplayer"]
+            sel_genre = st.selectbox("🎮 Thể loại game:", genre_list, index=0, key="vis_genre_sel")
+        with col_f3:
+            price_list = ["Tất cả phân khúc", "Miễn phí (Free $0)", "Budget (< $5)", "Mid-range ($5 - $15)", "Premium ($15 - $40)", "AAA (> $40)"]
+            sel_price = st.selectbox("💵 Phân khúc giá:", price_list, index=0, key="vis_price_sel")
+        with col_f4:
+            plat_list = ["Tất cả nền tảng", "Chỉ Windows", "Hỗ trợ Mac/Linux"]
+            sel_plat = st.selectbox("💻 Nền tảng:", plat_list, index=0, key="vis_plat_sel")
+        
+        col_e1, col_e2 = st.columns([2.5, 1])
+        with col_e1:
+            query_engine = st.radio("⚡ Động cơ truy vấn:", ["Apache Impala (Live MPP Query)", "Python Pandas (In-Memory RAM)"], horizontal=True, key="vis_engine_radio")
+        with col_e2:
+            st.markdown("<div style='height:26px'></div>", unsafe_allow_html=True)
+            refresh_btn = st.button("🔄 Cập Nhật Thống Kê", use_container_width=True, key="vis_refresh_btn")
+
+    # 2. XỬ LÝ TRUY VẤN TÍNH TOÁN KPI
+    kpi_data = None
+    gen_sql = ""
+    engine_used = ""
+
+    where_conds = [f"g.release_year >= {sel_years[0]}", f"g.release_year <= {sel_years[1]}"]
+    if sel_price == "Miễn phí (Free $0)":
+        where_conds.append("g.price = 0")
+    elif sel_price == "Budget (< $5)":
+        where_conds.append("g.price > 0 AND g.price < 5")
+    elif sel_price == "Mid-range ($5 - $15)":
+        where_conds.append("g.price >= 5 AND g.price <= 15")
+    elif sel_price == "Premium ($15 - $40)":
+        where_conds.append("g.price > 15 AND g.price <= 40")
+    elif sel_price == "AAA (> $40)":
+        where_conds.append("g.price > 40")
+
+    if sel_plat == "Chỉ Windows":
+        where_conds.append("g.windows = true AND g.mac = false AND g.linux = false")
+    elif sel_plat == "Hỗ trợ Mac/Linux":
+        where_conds.append("(g.mac = true OR g.linux = true)")
+
+    join_sql = ""
+    count_target = "COUNT(*)"
+    if sel_genre != "Tất cả thể loại":
+        join_sql = "JOIN games_genres gg ON g.appid = gg.appid"
+        where_conds.append(f"gg.genre = '{sel_genre}'")
+        count_target = "COUNT(DISTINCT g.appid)"
+
+    where_str = " AND ".join(where_conds)
+
+    if query_engine.startswith("Apache Impala"):
+        gen_sql = f"""SELECT 
+    {count_target} AS total_games,
+    SUM(CASE WHEN g.price = 0 THEN 1 ELSE 0 END) AS free_games,
+    AVG(CASE WHEN g.price > 0 THEN g.price ELSE NULL END) AS avg_paid_price,
+    AVG(CASE WHEN g.pct_pos_total >= 0 THEN g.pct_pos_total ELSE NULL END) AS avg_rating,
+    SUM(CASE WHEN g.num_reviews_total >= 0 THEN g.num_reviews_total ELSE 0 END) AS total_reviews,
+    MAX(g.peak_ccu) AS max_ccu
+FROM games_parquet g
+{join_sql}
+WHERE {where_str};"""
+
+        with st.spinner("Đang tính toán qua Apache Impala MPP..."):
+            df_kpi, err_kpi, lat_kpi, _, _ = execute_impala_query(gen_sql)
+            if isinstance(df_kpi, pd.DataFrame) and not df_kpi.empty and err_kpi is None:
+                r = df_kpi.iloc[0]
+                kpi_data = {
+                    "total_games": int(r["total_games"]) if pd.notna(r["total_games"]) else 0,
+                    "free_games": int(r["free_games"]) if pd.notna(r["free_games"]) else 0,
+                    "avg_paid_price": float(r["avg_paid_price"]) if pd.notna(r["avg_paid_price"]) else 0.0,
+                    "avg_rating": float(r["avg_rating"]) if pd.notna(r["avg_rating"]) else 0.0,
+                    "total_reviews": int(r["total_reviews"]) if pd.notna(r["total_reviews"]) else 0,
+                    "max_ccu": int(r["max_ccu"]) if pd.notna(r["max_ccu"]) else 0,
+                    "latency": lat_kpi
+                }
+                engine_used = f"⚡ Apache Impala ({lat_kpi:.3f} s)"
+
+    if kpi_data is None:
+        t_p_start = time.perf_counter()
+        df_p = get_cached_games_df()
+        if df_p is not None:
+            mask = (df_p["release_year"] >= sel_years[0]) & (df_p["release_year"] <= sel_years[1])
+            if sel_price == "Miễn phí (Free $0)":
+                mask &= (df_p["price"] == 0)
+            elif sel_price == "Budget (< $5)":
+                mask &= (df_p["price"] > 0) & (df_p["price"] < 5)
+            elif sel_price == "Mid-range ($5 - $15)":
+                mask &= (df_p["price"] >= 5) & (df_p["price"] <= 15)
+            elif sel_price == "Premium ($15 - $40)":
+                mask &= (df_p["price"] > 15) & (df_p["price"] <= 40)
+            elif sel_price == "AAA (> $40)":
+                mask &= (df_p["price"] > 40)
+
+            if sel_plat == "Chỉ Windows":
+                mask &= (df_p["windows"] == True) & (df_p["mac"] == False) & (df_p["linux"] == False)
+            elif sel_plat == "Hỗ trợ Mac/Linux":
+                mask &= ((df_p["mac"] == True) | (df_p["linux"] == True))
+
+            df_filtered = df_p[mask]
+            if sel_genre != "Tất cả thể loại":
+                df_genres = get_cached_genres_df()
+                if df_genres is not None:
+                    matched_appids = df_genres[df_genres["genre"] == sel_genre]["appid"]
+                    df_filtered = df_filtered[df_filtered["appid"].isin(matched_appids)]
+
+            t_p_lat = time.perf_counter() - t_p_start
+            tot = len(df_filtered)
+            fg = int((df_filtered["price"] == 0).sum())
+            paid = df_filtered[df_filtered["price"] > 0]
+            avg_p = float(paid["price"].mean()) if len(paid) > 0 else 0.0
+            valid_rating = df_filtered[df_filtered["pct_pos_total"] >= 0]
+            avg_r = float(valid_rating["pct_pos_total"].mean()) if len(valid_rating) > 0 else 0.0
+            valid_rev = df_filtered[df_filtered["num_reviews_total"] >= 0]
+            tot_rev = int(valid_rev["num_reviews_total"].sum()) if len(valid_rev) > 0 else 0
+            m_ccu = int(df_filtered["peak_ccu"].max()) if len(df_filtered) > 0 else 0
+
+            kpi_data = {
+                "total_games": tot,
+                "free_games": fg,
+                "avg_paid_price": avg_p,
+                "avg_rating": avg_r,
+                "total_reviews": tot_rev,
+                "max_ccu": m_ccu,
+                "latency": t_p_lat
+            }
+            engine_used = f"🐼 Python Pandas ({t_p_lat:.3f} s)"
+
+    # 3. HÀNG CHỈ SỐ KPI TỔNG HỢP
+    if kpi_data:
+        free_ratio = (kpi_data["free_games"] / kpi_data["total_games"] * 100) if kpi_data["total_games"] > 0 else 0
+        col_m1, col_m2, col_m3, col_m4, col_m5, col_m6 = st.columns(6)
+        with col_m1:
+            st.metric("🎮 Số Lượng Game", f"{kpi_data['total_games']:,}", delta=f"{kpi_data['total_games']/89618*100:.1f}% dataset")
+        with col_m2:
+            st.metric("🎁 Tỷ Lệ Free-to-Play", f"{free_ratio:.1f}%", delta=f"{kpi_data['free_games']:,} game $0")
+        with col_m3:
+            st.metric("💵 Giá TB (Có phí)", f"${kpi_data['avg_paid_price']:.2f}")
+        with col_m4:
+            st.metric("⭐ Điểm Đánh Giá TB", f"{kpi_data['avg_rating']:.1f}%", delta="Đã lọc Sentinel -1")
+        with col_m5:
+            st.metric("💬 Tổng Lượt Reviews", f"{kpi_data['total_reviews']/1e6:.1f}M" if kpi_data['total_reviews'] >= 1e6 else f"{kpi_data['total_reviews']:,}")
+        with col_m6:
+            st.metric("⚡ Động Cơ Thực Thi", engine_used)
+
+        if gen_sql:
+            with st.expander("🔍 Xem câu lệnh SQL Impala động tương ứng với bộ lọc này"):
+                st.code(gen_sql, language="sql")
 
     st.markdown("---")
-    st.markdown("#### 3. Bảng xếp hạng Top Games có lượt đánh giá khủng nhất Steam (Outliers)")
-    q_hall = "SELECT name, release_year, price, pct_pos_total, num_reviews_total, peak_ccu FROM games_parquet ORDER BY num_reviews_total DESC LIMIT 15;"
-    df_h, _, _, _, _ = execute_impala_query(q_hall)
-    if isinstance(df_h, pd.DataFrame) and not df_h.empty:
-        st.dataframe(df_h, use_container_width=True)
+
+    # 4. CÁC PHÂN HỆ TRỰC QUAN HÓA CHUYÊN ĐỀ
+    sub_v1, sub_v2, sub_v3, sub_v4, sub_v5 = st.tabs([
+        "📅 1. Tiến Trình Thời Gian & Kỷ Nguyên",
+        "💰 2. Cơ Cấu Giá & 'Điểm Ngọt'",
+        "🎮 3. Thể Loại & Đa Nền Tảng",
+        "🚨 4. Ngoại Lệ (Outliers IQR/Z-Score)",
+        "🔎 5. Khám Phá & Xuất Dữ Liệu Động"
+    ])
+
+    # SUB-TAB 1: TIẾN TRÌNH THỜI GIAN & KỶ NGUYÊN
+    with sub_v1:
+        st.markdown("#### 📅 1. Phân Tích Lịch Sử Phát Hành, Tăng Trưởng & Free-to-Play (1997 - 2025)")
+        df_q1 = load_analysis_result("q1_yearly_releases_f2p.csv")
+        df_q2 = load_analysis_result("q2_yoy_growth.csv")
+        
+        if df_q1 is not None and not df_q1.empty:
+            df_q1_filtered = df_q1[(df_q1["release_year"] >= sel_years[0]) & (df_q1["release_year"] <= sel_years[1])]
+            
+            c_v1_1, c_v1_2 = st.columns(2)
+            with c_v1_1:
+                st.markdown("**Số lượng phát hành: Game Trả phí vs Game Miễn phí (Free):**")
+                chart_games = df_q1_filtered.set_index("release_year")[["paid_games", "free_games"]]
+                st.bar_chart(chart_games, color=["#0284C7", "#10B981"])
+                st.caption("Nhận xét: Thị trường tăng trưởng bùng nổ mạnh mẽ từ năm 2014 và đạt đỉnh trên 18,200 tựa game vào năm 2024.")
+
+            with c_v1_2:
+                st.markdown("**Tỷ lệ Game Free-to-Play (%) & Giá bán TB ($):**")
+                chart_ratio = df_q1_filtered.set_index("release_year")[["free_ratio_pct", "avg_paid_price"]]
+                st.line_chart(chart_ratio, color=["#F59E0B", "#EC4899"])
+                st.caption("Nhận xét: Tỷ lệ game Free-to-Play tăng trưởng gấp đôi từ 8.2% (2014) lên 17.26% (2024), trong khi giá trung bình ổn định quanh mốc $8 - $9.")
+
+        if df_q2 is not None and not df_q2.empty:
+            st.markdown("---")
+            st.markdown("#### 🚀 Tốc Độ Tăng Trưởng Năm-Qua-Năm (YoY Growth Rate %):")
+            c_yoy1, c_yoy2 = st.columns([2, 1])
+            with c_yoy1:
+                st.bar_chart(df_q2.set_index("release_year")[["yoy_growth_pct"]], color="#8B5CF6")
+            with c_yoy2:
+                st.info("""
+                📌 **Các mốc sự kiện quan trọng:**
+                - **2014:** Steam ra mắt chính sách Early Access & Greenlight mở rộng.
+                - **2017:** Chuyển đổi sang **Steam Direct** (bỏ phí kiểm duyệt cao, chỉ thu $100 cọc), dẫn đến làn sóng game Indie bùng nổ theo cấp số nhân.
+                - **2023 - 2024:** Đỉnh cao phát hành game toàn cầu sau đại dịch Covid.
+                """)
+
+        st.markdown("---")
+        st.markdown("#### 🏛️ Phân Tích 4 Kỷ Nguyên Lịch Sử Của Steam:")
+        df_q3 = load_analysis_result("q3_genres_by_era.csv")
+        if df_q3 is not None and not df_q3.empty:
+            eras = df_q3["period_era"].unique().tolist()
+            sel_era = st.selectbox("Chọn kỷ nguyên khảo sát:", eras, index=len(eras)-1, key="sel_era_box")
+            df_era_sel = df_q3[df_q3["period_era"] == sel_era].head(10)
+            
+            c_era1, c_era2 = st.columns([2, 1])
+            with c_era1:
+                st.bar_chart(df_era_sel.set_index("genre")[["total_games"]], color="#38BDF8")
+            with c_era2:
+                era_notes = {
+                    "1. Kỷ nguyên Cổ điển (2000-2009)": "Thời kỳ ban đầu: Steam chủ yếu phân phối game của Valve và các studio lớn. Thể loại Action và Strategy chiếm ưu thế tuyệt đối.",
+                    "2. Giai đoạn Greenlight (2010-2014)": "Cộng đồng bỏ phiếu bình chọn game lên Steam. Bắt đầu xuất hiện phong trào game độc lập.",
+                    "3. Giai đoạn Bùng nổ Indie (2015-2019)": "Steam Direct chính thức áp dụng. Thể loại Indie vươn lên vị trí số 1 áp đảo hoàn toàn.",
+                    "4. Kỷ nguyên Hiện đại (2020-2025)": "Hơn 60,000 tựa game phát hành. Dòng game Casual, Simulation và Adventure phát triển cực thịnh."
+                }
+                st.success(f"💡 **Đặc trưng:** {era_notes.get(sel_era, 'Giai đoạn phát triển đa dạng.')}")
+
+    # SUB-TAB 2: CƠ CẤU GIÁ & "ĐIỂM NGỌT"
+    with sub_v2:
+        st.markdown("#### 💰 2. Phân Tích Cơ Cấu Giá & Khám Phá 'Điểm Ngọt' Thị Trường (Market Sweet Spot)")
+        df_q5 = load_analysis_result("q5_price_category_summary.csv")
+        
+        if df_q5 is not None and not df_q5.empty:
+            c_p1, c_p2 = st.columns(2)
+            with c_p1:
+                st.markdown("**Thị phần số lượng game theo phân khúc giá (%):**")
+                st.bar_chart(df_q5.set_index("price_category")[["category_share_pct"]], color="#38BDF8")
+                st.caption("Quan sát: Phân khúc Budget (< $5) chiếm tỷ trọng áp đảo (43.95%), tiếp theo là Mid-range (29.86%) và Free (15.80%).")
+
+            with c_p2:
+                st.markdown("**Tương quan: Độ hài lòng (% Positive) & Lượng Reviews TB:**")
+                st.bar_chart(df_q5.set_index("price_category")[["avg_positive_pct"]], color="#10B981")
+                st.caption("Quan sát: Phân khúc $5 - $40 có tỷ lệ đánh giá tích cực cao nhất (78.2%).")
+
+            st.markdown("---")
+            st.markdown("#### 📋 Bảng Tổng Hợp Chi Tiết 6 Phân Khúc Giá:")
+            st.dataframe(df_q5, use_container_width=True)
+
+            st.info("""
+            💡 **Phát Hiện Khoa Học: 'Điểm Ngọt' Thị Trường (Market Sweet Spot)**
+            1. **Budget (< $5):** Chiếm tới 44% số lượng game nhưng lượng review trung bình chỉ đạt **500 reviews**, cho thấy mức độ đào thải cao và ít được chú ý.
+            2. **Mid-range ($5 - $15) & Premium ($15 - $40):** Là **'Điểm ngọt' lý tưởng nhất**:
+               - Đạt tỷ lệ đánh giá cao nhất toàn sàn: **78.14% - 78.26%**.
+               - Lượng reviews tương tác trung bình tăng vọt lên **1,270 - 5,492 reviews** (gấp 2.5x đến 11x so với nhóm Budget).
+            3. **Luxury (> $70):** Có điểm đánh giá thấp nhất (**73.85%**) do tâm lý người dùng đặt kỳ vọng quá khắt khe khi bỏ số tiền lớn.
+            """)
+
+    # SUB-TAB 3: THỂ LOẠI & ĐA NỀN TẢNG
+    with sub_v3:
+        st.markdown("#### 🎮 3. Phân Tích Thể Loại Game & Chiến Lược Đa Nền Tảng")
+        df_q4 = load_analysis_result("q4_genre_profile.csv")
+        df_q10 = load_analysis_result("q10_platform_strategy.csv")
+        
+        c_g1, c_g2 = st.columns(2)
+        with c_g1:
+            if df_q4 is not None and not df_q4.empty:
+                st.markdown("**Top 10 Thể loại có số lượng phát hành nhiều nhất:**")
+                top_10_g = df_q4.sort_values(by="total_games", ascending=False).head(10)
+                st.bar_chart(top_10_g.set_index("genre")[["total_games"]], color="#0284C7")
+        with c_g2:
+            if df_q4 is not None and not df_q4.empty:
+                st.markdown("**Top 10 Thể loại có điểm đánh giá hài lòng cao nhất:**")
+                top_10_rate = df_q4[df_q4["total_games"] >= 100].sort_values(by="avg_positive_rating", ascending=False).head(10)
+                st.bar_chart(top_10_rate.set_index("genre")[["avg_positive_rating"]], color="#10B981")
+
+        st.markdown("---")
+        st.markdown("#### 💻 Chiến Lược Nền Tảng: Windows-Only vs Đa Nền Tảng (Mac / Linux):")
+        if df_q10 is not None and not df_q10.empty:
+            c_plat1, c_plat2 = st.columns([1.5, 1])
+            with c_plat1:
+                st.dataframe(df_q10.set_index("platform_strategy"), use_container_width=True)
+                st.bar_chart(df_q10.set_index("platform_strategy")[["avg_reviews"]], color="#EC4899")
+            with c_plat2:
+                st.success("""
+                🎯 **Kết luận chiến lược kinh doanh:**
+                - **Chỉ chạy Windows (76.95% thị trường):** Điểm đánh giá trung bình 75.92%, lượt reviews trung bình 1,760.
+                - **Hỗ trợ thêm macOS & Linux (23.05% thị trường):**
+                  - Điểm đánh giá cao hơn vượt trội: **80.28%** (+4.36%).
+                  - Lượng review tương tác trung bình **3,536 reviews (GẤP ĐÔI 2.0x)**!
+                - **Ý nghĩa:** Cộng đồng game thủ Mac & Linux ít lựa chọn hơn nên có xu hướng gắn kết sâu sắc, ủng hộ nhiệt tình và viết đánh giá tích cực hơn nhiều lần.
+                """)
+
+        st.markdown("---")
+        st.markdown("#### 🏢 Top Nhà Phát Hành (Publishers) & Nhà Phát Triển (Developers):")
+        df_q7 = load_analysis_result("q7_top_publishers.csv")
+        df_q6 = load_analysis_result("q6_top_developers.csv")
+        c_pub1, c_pub2 = st.columns(2)
+        with c_pub1:
+            if df_q7 is not None and not df_q7.empty:
+                st.markdown("**Top 10 Nhà phát hành gom nhiều lượt review nhất:**")
+                st.dataframe(df_q7.head(10)[["publisher", "published_games", "total_reviews_amassed", "avg_publisher_rating"]], use_container_width=True)
+        with c_pub2:
+            if df_q6 is not None and not df_q6.empty:
+                st.markdown("**Top 10 Nhà phát triển có nhiều game nhất:**")
+                st.dataframe(df_q6.head(10)[["developer", "total_released_games", "avg_game_price", "avg_game_rating"]], use_container_width=True)
+
+    # SUB-TAB 4: NGOẠI LỆ (OUTLIERS IQR / Z-SCORE)
+    with sub_v4:
+        st.markdown("#### 🚨 4. Phân Tích Ngoại Lệ Dữ Liệu (Outlier Analysis: IQR & Z-Score)")
+        st.markdown("""
+        Trong quy trình tiền xử lý Data Mining chuẩn, thay vì xóa bỏ các điểm bất thường, nhóm áp dụng kỹ thuật 
+        **gắn cờ ngoại lệ (Flagging)** để bảo toàn các thực thể trọng yếu định hình thị trường:
+        """)
+        
+        c_out_m1, c_out_m2, c_out_m3 = st.columns(3)
+        with c_out_m1:
+            st.metric("Ngưỡng Ngoại Lệ Giá (IQR)", "$20.49", "Q3 + 1.5*IQR (4,231 games)")
+        with c_out_m2:
+            st.metric("Ngưỡng Ngoại Lệ Reviews (IQR)", "564 reviews", "Q3 + 1.5*IQR (8,492 games)")
+        with c_out_m3:
+            st.metric("Tỷ Lệ Sentinel -1 Triệt Tiêu", "40.6% bản ghi", "Đã chuyển về NULL")
+
+        st.markdown("---")
+        st.markdown("##### 🏆 Hai Thái Cực Đối Lập Của Ngoại Lệ Thị Trường Steam:")
+        
+        c_ext1, c_ext2 = st.columns(2)
+        with c_ext1:
+            st.markdown("##### 🟢 Cực đoan 1: Siêu game Giá Rẻ / F2P có lượng Review Khủng")
+            df_cheap_huge = load_analysis_result("q9_cheap_huge_reviews.csv")
+            if df_cheap_huge is not None and not df_cheap_huge.empty:
+                st.dataframe(df_cheap_huge[["name", "price", "num_reviews_total", "pct_pos_total", "peak_ccu"]].head(10), use_container_width=True)
+                st.caption("Các tựa game như Counter-Strike 2, Dota 2, PUBG có Z-Score review > 30, tuy là Outlier toán học nhưng là rường cột doanh thu của Steam.")
+
+        with c_ext2:
+            st.markdown("##### 🔴 Cực đoan 2: Ứng dụng / Game Giá Cắt Cổ ($100 - $999) Ít Người Mua")
+            df_exp_few = load_analysis_result("q9_expensive_few_reviews.csv")
+            if df_exp_few is not None and not df_exp_few.empty:
+                st.dataframe(df_exp_few[["name", "price", "num_reviews_total", "pct_pos_total"]].head(10), use_container_width=True)
+                st.caption("Các phần mềm sản xuất chuyên dụng hoặc game thử nghiệm đặt giá bất thường ($199 - $999) nhưng chỉ nhận được dưới 50 reviews.")
+
+    # SUB-TAB 5: KHÁM PHÁ & XUẤT DỮ LIỆU ĐỘNG
+    with sub_v5:
+        st.markdown("#### 🔎 5. Khám Phá & Xuất Dữ Liệu Động (Interactive Explorer)")
+        st.markdown("Dữ liệu được lọc theo đúng bộ công cụ bạn đã chọn ở trên. Bạn có thể sắp xếp và tải file CSV về máy:")
+        
+        c_ex1, c_ex2 = st.columns([2, 1])
+        with c_ex1:
+            sort_by_col = st.selectbox("Sắp xếp theo tiêu chí:", [
+                "Lượt Đánh Giá (num_reviews_total)", 
+                "Độ Hài Lòng (pct_pos_total)", 
+                "Giá Bán (price)", 
+                "Người Chơi Đồng Thời (peak_ccu)",
+                "Năm Phát Hành (release_year)"
+            ], index=0, key="exp_sort_sel")
+        with c_ex2:
+            top_limit = st.selectbox("Số lượng bản ghi:", [25, 50, 100, 200], index=1, key="exp_limit_sel")
+            
+        sort_map = {
+            "Lượt Đánh Giá (num_reviews_total)": "num_reviews_total",
+            "Độ Hài Lòng (pct_pos_total)": "pct_pos_total",
+            "Giá Bán (price)": "price",
+            "Người Chơi Đồng Thời (peak_ccu)": "peak_ccu",
+            "Năm Phát Hành (release_year)": "release_year"
+        }
+        order_field = sort_map[sort_by_col]
+
+        exp_sql = f"""SELECT g.appid, g.name, g.release_year, g.price, g.pct_pos_total, g.num_reviews_total, g.peak_ccu, g.windows, g.mac, g.linux
+FROM games_parquet g
+{join_sql}
+WHERE {where_str}
+ORDER BY g.{order_field} DESC
+LIMIT {top_limit};"""
+
+        df_exp = None
+        if query_engine.startswith("Apache Impala"):
+            df_exp, err_exp, _, _, _ = execute_impala_query(exp_sql)
+            if not isinstance(df_exp, pd.DataFrame) or df_exp.empty or err_exp:
+                df_exp = None
+
+        if df_exp is None:
+            df_p = get_cached_games_df()
+            if df_p is not None:
+                mask = (df_p["release_year"] >= sel_years[0]) & (df_p["release_year"] <= sel_years[1])
+                if sel_price == "Miễn phí (Free $0)":
+                    mask &= (df_p["price"] == 0)
+                elif sel_price == "Budget (< $5)":
+                    mask &= (df_p["price"] > 0) & (df_p["price"] < 5)
+                elif sel_price == "Mid-range ($5 - $15)":
+                    mask &= (df_p["price"] >= 5) & (df_p["price"] <= 15)
+                elif sel_price == "Premium ($15 - $40)":
+                    mask &= (df_p["price"] > 15) & (df_p["price"] <= 40)
+                elif sel_price == "AAA (> $40)":
+                    mask &= (df_p["price"] > 40)
+
+                if sel_plat == "Chỉ Windows":
+                    mask &= (df_p["windows"] == True) & (df_p["mac"] == False) & (df_p["linux"] == False)
+                elif sel_plat == "Hỗ trợ Mac/Linux":
+                    mask &= ((df_p["mac"] == True) | (df_p["linux"] == True))
+
+                df_filtered = df_p[mask]
+                if sel_genre != "Tất cả thể loại":
+                    df_genres = get_cached_genres_df()
+                    if df_genres is not None:
+                        matched_appids = df_genres[df_genres["genre"] == sel_genre]["appid"]
+                        df_filtered = df_filtered[df_filtered["appid"].isin(matched_appids)]
+                
+                df_exp = df_filtered.sort_values(by=order_field, ascending=False).head(top_limit)[[
+                    "appid", "name", "release_year", "price", "pct_pos_total", "num_reviews_total", "peak_ccu", "windows", "mac", "linux"
+                ]]
+
+        if df_exp is not None and not df_exp.empty:
+            st.dataframe(df_exp, use_container_width=True)
+            
+            c_dl1, _ = st.columns([1.5, 3])
+            with c_dl1:
+                csv_bytes = df_exp.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Tải Dữ Liệu Báo Cáo Đã Lọc (CSV)",
+                    data=csv_bytes,
+                    file_name=f"steam_report_{sel_years[0]}_{sel_years[1]}_{int(time.time())}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="btn_download_report_csv"
+                )
+        else:
+            st.warning("Không tìm thấy tựa game nào phù hợp với bộ lọc hiện tại.")
 
 # =============================================================================
 # TAB 4: SYSTEM & DATASET HEALTH CHECK (KIỂM TRA MÔI TRƯỜNG & DỮ LIỆU)
